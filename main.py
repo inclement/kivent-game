@@ -19,7 +19,7 @@ from functools import partial
 
 import ipdb
 
-class ProjectileSystem(GameSystem):
+class MyProjectileSystem(GameSystem):
 
     def fire_projectile(self, pos, angle):
         shape_dict = {'inner_radius': 0,
@@ -32,12 +32,11 @@ class ProjectileSystem(GameSystem):
                      'shape_info': shape_dict,
                      'friction': 10.0}
         col_shapes = [col_shape]
-        angle = self.angle
         vel = (100*cos(angle), 100*sin(angle))
         physics_component = {'main_shape': 'circle',
                              'velocity': vel,
                              'position': pos,
-                             'angle': self.angle,
+                             'angle': angle,
                              'angular_velocity': 0,
                              'vel_limit': 500,
                              'ang_vel_limit': radians(200),
