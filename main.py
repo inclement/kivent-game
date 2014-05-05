@@ -74,14 +74,12 @@ class PlayerSystem(GameSystem):
         if keycode not in (273, 274, 275, 276):
             return
         self.keys_pressed.add(keycode)
-        self.recalculate_velocity()
 
     def on_key_up(self, window, keycode, *args):
         print 'key up', self.velocity
         if keycode not in (273, 274, 275, 276):
             return
         self.keys_pressed.remove(keycode)
-        self.recalculate_velocity()
 
     def update(self, dt):
         super(PlayerSystem, self).update(dt)
@@ -93,6 +91,7 @@ class PlayerSystem(GameSystem):
         angle = atan2(diff[1], diff[0])
         body.angle = angle
         self.angle = angle
+        self.recalculate_velocity()
 
     def recalculate_velocity(self, *args):
         vel = Vector([0, 0])
@@ -111,8 +110,10 @@ class PlayerSystem(GameSystem):
     def on_touch_down(self, touch):
         entity = self.gameworld.entities[self.entity_ids[0]]
         print 'pos is', entity.physics.body.position
+        angle = self.angle
         self.gameworld.systems['projectile'].fire_projectile(
-            (entity.position.x, entity.position.y), self.angle)
+            (entity.position.x + 37*cos(angle),
+             entity.position.y + 37*sin(angle)), self.angle)
     
     def spawn_player(self, pos):
         shape_dict = {'inner_radius': 0,
