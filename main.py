@@ -8,7 +8,7 @@ from kivy.clock import Clock
 from kivy.vector import Vector
 from kivy.properties import (ListProperty, DictProperty,
                              NumericProperty, ObjectProperty,
-                             BooleanProperty)
+                             BooleanProperty, StringProperty)
 
 import kivent
 from kivent import GameSystem
@@ -32,7 +32,7 @@ class MyProjectileSystem(GameSystem):
                      'shape_info': shape_dict,
                      'friction': 10.0}
         col_shapes = [col_shape]
-        vel = (100*cos(angle), 100*sin(angle))
+        vel = (500*cos(angle), 500*sin(angle))
         physics_component = {'main_shape': 'circle',
                              'velocity': vel,
                              'position': pos,
@@ -54,6 +54,96 @@ class MyProjectileSystem(GameSystem):
                                             component_order)
         return result
 
+class WallSystem(GameSystem):
+
+    building = BooleanProperty(False)
+    prelim_start = ListProperty([0, 0])
+    prelim_end = ListProperty([10, 10])
+
+    def create_wall(self, pos, length, angle):
+        shape_dict = {'width': length,
+                      'height': 10,
+                      'mass': 50}
+        col_shape = {'shape_type': 'box',
+                     'elasticity': 1.,
+                     'collision_type': 4,
+                     'shape_info': shape_dict,
+                     'friction': 10.0}
+        col_shapes = [col_shape]
+
+        centre_x = pos[0] + 0.5*length*cos(angle)
+        centre_y = pos[1] + 0.5*length*sin(angle)
+        physics_component = {'main_shape': 'box',
+                             'velocity': (0, 0),
+                             'position': (centre_x, centre_y),
+                             'angle': angle,
+                             'angular_velocity': 0,
+                             'vel_limit': 0,
+                             'ang_vel_limit': 0,
+                             'mass': 50,
+                             'col_shapes': col_shapes}
+        create_component_dict = {'physics': physics_component,
+                                 'physics_renderer': {'texture': 'fireball',
+                                                      'size': (length, 10)},
+                                 'position': pos,
+                                 'wall': {},
+                                 'rotate': 0}
+        component_order = ['position', 'rotate', 'physics', 'wall',
+                           'physics_renderer']
+        result = self.gameworld.init_entity(create_component_dict,
+                                            component_order)
+        return result
+
+    def confirm_wall(self):
+        pos = tuple(self.prelim_start)
+        length = sqrt((self.prelim_end[0] - self.prelim_start[0])**2 +
+                      (self.prelim_end[1] - self.prelim_start[1])**2)
+        angle = atan2(self.prelim_end[1] - self.prelim_start[1],
+                      self.prelim_end[0] - self.prelim_start[0])
+        self.create_wall(pos, length, angle)
+
+
+class InputSystem(GameSystem):
+
+    touch_mode = StringProperty('wall')
+
+    def __init__(self, *args, **kwargs):
+        super(InputSystem, self).__init__(*args, **kwargs)
+        Window.bind(on_key_down=self.on_key_down,
+                    on_key_up=self.on_key_up)
+
+    def on_key_down(self, window, keycode, *args):
+        if keycode not in (273, 274, 275, 276):
+            return
+        self.gameworld.systems['player'].keys_pressed.add(keycode)
+
+    def on_key_up(self, window, keycode, *args):
+        if keycode not in (273, 274, 275, 276):
+            return
+        self.gameworld.systems['player'].keys_pressed.remove(keycode)
+
+    def on_touch_down(self, touch):
+        if self.touch_mode == 'player':
+            self.gameworld.systems['player'].handle_touch_down(touch)
+        elif self.touch_mode == 'wall':
+            ws = self.gameworld.systems['wall']
+            ws.prelim_start = touch.pos
+            ws.prelim_end = touch.pos
+            ws.building = True
+
+    def on_touch_move(self, touch):
+        if self.touch_mode == 'wall':
+            ws = self.gameworld.systems['wall']
+            ws.prelim_end = touch.pos
+
+    def on_touch_up(self, touch):
+        if self.touch_mode == 'wall':
+            ws = self.gameworld.systems['wall']
+            if ws.building:
+                ws.confirm_wall()
+            ws.building = False
+    
+
 class PlayerSystem(GameSystem):
 
     velocity = ListProperty([0, 0])
@@ -65,21 +155,7 @@ class PlayerSystem(GameSystem):
 
     def __init__(self, *args, **kwargs):
         super(PlayerSystem, self).__init__(*args, **kwargs)
-        Window.bind(on_key_down=self.on_key_down,
-                    on_key_up=self.on_key_up,
-                    mouse_pos=self.setter('mouse_pos'))
-
-    def on_key_down(self, window, keycode, *args):
-        print 'key down', self.velocity
-        if keycode not in (273, 274, 275, 276):
-            return
-        self.keys_pressed.add(keycode)
-
-    def on_key_up(self, window, keycode, *args):
-        print 'key up', self.velocity
-        if keycode not in (273, 274, 275, 276):
-            return
-        self.keys_pressed.remove(keycode)
+        Window.bind(mouse_pos=self.setter('mouse_pos'))
 
     def update(self, dt):
         super(PlayerSystem, self).update(dt)
@@ -102,14 +178,12 @@ class PlayerSystem(GameSystem):
         self.velocity = vel
 
     def on_velocity(self, *args):
-        print 'velocity changed', self.velocity
         entity = self.gameworld.entities[self.entity_ids[0]]
         entity.physics.body.velocity = (500*self.velocity[0],
                                         500*self.velocity[1])
 
-    def on_touch_down(self, touch):
+    def handle_touch_down(self, touch):
         entity = self.gameworld.entities[self.entity_ids[0]]
-        print 'pos is', entity.physics.body.position
         angle = self.angle
         self.gameworld.systems['projectile'].fire_projectile(
             (entity.position.x + 37*cos(angle),
@@ -186,7 +260,7 @@ class Interface(BoxLayout):
 
 class KiventApp(App):
     def build(self):
-        Window.clearcolor = (0.1, 0.1, 0.1, 1)
+        Window.clearcolor = (0.9, 0.9, 0.9, 1)
 
 
 

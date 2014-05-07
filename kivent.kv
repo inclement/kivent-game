@@ -15,16 +15,32 @@ KiventGame:
             system_id: 'color'
             gameworld: gameworld
         GameView:
-            system_id: 'gameview'
             focus_entity: False
+            system_id: 'gameview'
             updateable: False
             gameworld: gameworld
             pos: root.pos
             do_scroll: False
             size: root.size
+        InputSystem:
+            system_id: 'input'
+            gameworld: gameworld
         PlayerSystem:
             system_id: 'player'
             gameworld: gameworld
+        WallSystem:
+            system_id: 'wall'
+            gameworld: gameworld
+            canvas:
+                Color:
+                    rgba: 0, 0, 1, self.building
+                Line:
+                    points:
+                        [self.prelim_start[0],
+                        self.prelim_start[1],
+                        self.prelim_end[0],
+                        self.prelim_end[1]]
+                    width: 2
         MyProjectileSystem:
             system_id: 'projectile'
             gameworld: gameworld
@@ -35,7 +51,7 @@ KiventGame:
         QuadRendererNoTextures:
             gameworld: gameworld
             system_id: 'debug_renderer'
-            shader_source: 'assets/glsl/positioncolorshader.glsl'
+            shader_source: 'assets/glsl/positionrotateshader.glsl'
         DynamicRenderer:
             gameworld: gameworld
             system_id: 'physics_renderer'
