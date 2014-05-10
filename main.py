@@ -1,5 +1,8 @@
 from kivy.app import App
 
+from kivy import config
+config.Config.set('input', 'mouse', 'mouse,disable_multitouch')
+
 from kivy.uix.widget import Widget
 from kivy.uix.effectwidget import EffectWidget, FXAAEffect
 from kivy.uix.boxlayout import BoxLayout
@@ -80,7 +83,7 @@ class WallSystem(GameSystem):
                              'angular_velocity': 0,
                              'vel_limit': 0,
                              'ang_vel_limit': 0,
-                             'mass': 50,
+                             'mass': 0,
                              'col_shapes': col_shapes}
         create_component_dict = {'physics': physics_component,
                                  'physics_renderer': {'texture': 'fireball',
@@ -105,8 +108,6 @@ class WallSystem(GameSystem):
 
 class InputSystem(GameSystem):
 
-    touch_mode = StringProperty('wall')
-
     def __init__(self, *args, **kwargs):
         super(InputSystem, self).__init__(*args, **kwargs)
         Window.bind(on_key_down=self.on_key_down,
@@ -123,25 +124,26 @@ class InputSystem(GameSystem):
         self.gameworld.systems['player'].keys_pressed.remove(keycode)
 
     def on_touch_down(self, touch):
-        if self.touch_mode == 'player':
-            self.gameworld.systems['player'].handle_touch_down(touch)
-        elif self.touch_mode == 'wall':
-            ws = self.gameworld.systems['wall']
-            ws.prelim_start = touch.pos
-            ws.prelim_end = touch.pos
-            ws.building = True
+        if 'button' in touch.profile:
+            if touch.button == 'left':
+                self.gameworld.systems['player'].handle_touch_down(touch)
+            elif touch.button == 'middle':
+                ws = self.gameworld.systems['wall']
+                ws.prelim_start = touch.pos
+                ws.prelim_end = touch.pos
+                ws.building = True
+            # elif touch.button == 'right':
+            #     ss = self.gameworld.systems['shield']
 
     def on_touch_move(self, touch):
-        if self.touch_mode == 'wall':
-            ws = self.gameworld.systems['wall']
-            ws.prelim_end = touch.pos
+        ws = self.gameworld.systems['wall']
+        ws.prelim_end = touch.pos
 
     def on_touch_up(self, touch):
-        if self.touch_mode == 'wall':
-            ws = self.gameworld.systems['wall']
-            if ws.building:
-                ws.confirm_wall()
-            ws.building = False
+        ws = self.gameworld.systems['wall']
+        if ws.building:
+            ws.confirm_wall()
+        ws.building = False
     
 
 class PlayerSystem(GameSystem):
@@ -176,11 +178,26 @@ class PlayerSystem(GameSystem):
                 {273: (0, 1), 274: (0, -1),
                  275: (1, 0), 276: (-1, 0)}[keycode])
         self.velocity = vel
+        self.update_physics_velocity()
 
-    def on_velocity(self, *args):
+    def update_physics_velocity(self, *args):
         entity = self.gameworld.entities[self.entity_ids[0]]
-        entity.physics.body.velocity = (500*self.velocity[0],
-                                        500*self.velocity[1])
+        mag = sqrt(sum([i**2 for i in self.velocity]))
+        if mag == 0:
+            mag = 1.
+
+        new_velocity = (500./mag*self.velocity[0],
+                        500./mag*self.velocity[1])
+
+        old_velocity = entity.physics.body.velocity
+        old_velocity = (old_velocity.x, old_velocity.y)
+
+        change = (new_velocity[0] - old_velocity[0],
+                  new_velocity[1] - old_velocity[1])
+
+        mass = entity.physics.body.mass
+
+        entity.physics.body.apply_impulse((mass*change[0], mass*change[1]))
 
     def handle_touch_down(self, touch):
         entity = self.gameworld.entities[self.entity_ids[0]]
