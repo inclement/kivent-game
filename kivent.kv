@@ -41,6 +41,12 @@ KiventGame:
                         self.prelim_end[0],
                         self.prelim_end[1]]
                     width: 2
+        ShieldSystem:
+            system_id: 'shield'
+            gameworld: gameworld
+        TimingSystem:
+            system_id: 'timing'
+            gameworld: gameworld
         MyProjectileSystem:
             system_id: 'projectile'
             gameworld: gameworld
@@ -54,11 +60,26 @@ KiventGame:
             shader_source: 'assets/glsl/positionrotateshader.glsl'
         DynamicRenderer:
             gameworld: gameworld
+            system_id: 'physics_color_renderer'
+            do_color: True
+            shader_source: 'assets/glsl/positionrotatecolorshader.glsl'
+            atlas_dir: 'assets/'
+            atlas: 'images_atlas'
+            physics_system: 'physics'
+        DynamicRenderer:
+            gameworld: gameworld
             system_id: 'physics_renderer'
             shader_source: 'assets/glsl/positionrotateshader.glsl'
             atlas_dir: 'assets/'
             atlas: 'images_atlas'
             physics_system: 'physics'
+        Renderer:
+            gameworld: gameworld
+            system_id: 'grid_renderer'
+            shader_source: 'assets/glsl/grid.glsl'
+            atlas_dir: 'assets/'
+            atlas: 'images_atlas'
+            do_rotate: False
         CymunkPhysics:
             gameworld: root.gameworld
             system_id: 'physics'

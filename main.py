@@ -16,7 +16,7 @@ from kivy.properties import (ListProperty, DictProperty,
 import kivent
 from kivent import GameSystem
 
-from random import randint
+from random import randint, choice
 from math import radians, sqrt, atan2, sin, cos
 from functools import partial
 
@@ -45,8 +45,9 @@ class MyProjectileSystem(GameSystem):
                              'ang_vel_limit': radians(200),
                              'mass': 50,
                              'col_shapes': col_shapes}
+        texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
         create_component_dict = {'physics': physics_component,
-                                 'physics_renderer': {'texture': 'fireball',
+                                 'physics_renderer': {'texture': texture,
                                                       'size': (20, 20)},
                                  'position': pos,
                                  'player': {},
@@ -56,6 +57,120 @@ class MyProjectileSystem(GameSystem):
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
         return result
+
+class ShieldSystem(GameSystem):
+
+    building = BooleanProperty(False)
+    current_entity = ObjectProperty(None, allownone=True)
+
+    building_points = ListProperty([])
+
+    current_touches = DictProperty({})
+
+    def new_touch(self, touch):
+        self.current_touches[touch] = (list(touch.pos), None)
+
+    def touch_move(self, touch):
+        if touch not in self.current_touches:
+            return
+
+        points, entity = self.current_touches[touch]
+
+        pos = touch.pos
+        diff = (pos[0] - points[-2], pos[1] - points[-1])
+        dist = sqrt(diff[0]**2 + diff[1]**2)
+
+        if dist > 25:
+            points.extend(pos)
+
+        if len(points) > 2:
+            if entity is None:
+                entity = self.init_new_shield(points)
+            else:
+                self.extend_shield(points, entity)
+
+        self.current_touches[touch] = (points, entity)
+
+    def touch_released(self, touch):
+        if touch in self.current_touches:
+            self.current_touches.pop(touch)
+                
+    def init_new_shield(self, points):
+        start = (points[0], points[1])
+        end = (points[-2], points[-1])
+        dr = (end[0] - start[0], end[1] - start[1])
+
+        angle = atan2(dr[1], dr[0])
+        length = sqrt(dr[0]**2 + dr[1]**2)
+        
+        shape_dict = {'width': length,
+                      'height': 10,
+                      'mass': 50}
+        col_shape = {'shape_type': 'box',
+                     'elasticity': 1.,
+                     'collision_type': 4,
+                     'shape_info': shape_dict,
+                     'friction': 10.0}
+        col_shapes = [col_shape]
+
+        centre_x = start[0] + 0.5*length*cos(angle)
+        centre_y = start[1] + 0.5*length*sin(angle)
+        physics_component = {'main_shape': 'box',
+                             'velocity': (0, 0),
+                             'position': (centre_x, centre_y),
+                             'angle': angle,
+                             'angular_velocity': 0,
+                             'vel_limit': 0,
+                             'ang_vel_limit': 0,
+                             'mass': 0,
+                             'col_shapes': col_shapes}
+        texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
+        create_component_dict = {'physics': physics_component,
+                                 'physics_color_renderer': {'texture': texture,
+                                                            'size': (length, 10)},
+                                 'position': start,
+                                 'wall': {},
+                                 'timing': {'original_time': 3.,
+                                            'current_time': 3.},
+                                 'color': (1, 1, 1, 1),
+                                 'rotate': 0}
+        component_order = ['position', 'rotate', 'color', 'physics', 'wall',
+                           'timing',
+                           'physics_color_renderer']
+        result = self.gameworld.init_entity(create_component_dict,
+                                            component_order)
+        return self.gameworld.entities[result]
+
+    def extend_shield(self, points, entity):
+        start = (points[0], points[1])
+        end = (points[-2], points[-1])
+        dr = (end[0] - start[0], end[1] - start[1])
+
+        angle = atan2(dr[1], dr[0])
+        length = sqrt(dr[0]**2 + dr[1]**2)
+
+        self.init_new_shield(points[-4:])
+
+
+class TimingSystem(GameSystem):
+
+    updateable = BooleanProperty(True)
+
+    def update(self, dt):
+        super(TimingSystem, self).update(dt)
+
+        for entity_id in self.entity_ids:
+            entity = self.gameworld.entities[entity_id]
+            timing_data = getattr(entity, self.system_id)
+
+            timing_data.current_time -= dt
+
+            opacity = timing_data.current_time / timing_data.original_time
+            entity.color.a = opacity
+
+            if timing_data.current_time < 0.:
+                self.gameworld.remove_entity(entity_id)
+        
 
 class WallSystem(GameSystem):
 
@@ -132,18 +247,29 @@ class InputSystem(GameSystem):
                 ws.prelim_start = touch.pos
                 ws.prelim_end = touch.pos
                 ws.building = True
-            # elif touch.button == 'right':
-            #     ss = self.gameworld.systems['shield']
+            elif touch.button == 'right':
+                ss = self.gameworld.systems['shield']
+                ss.new_touch(touch)
 
     def on_touch_move(self, touch):
-        ws = self.gameworld.systems['wall']
-        ws.prelim_end = touch.pos
+        if 'button' in touch.profile:
+            if touch.button == 'middle':
+                ws = self.gameworld.systems['wall']
+                ws.prelim_end = touch.pos
+            elif touch.button == 'right':
+                ss = self.gameworld.systems['shield']
+                ss.touch_move(touch)
 
     def on_touch_up(self, touch):
-        ws = self.gameworld.systems['wall']
-        if ws.building:
-            ws.confirm_wall()
-        ws.building = False
+        if 'button' in touch.profile:
+            if touch.button == 'middle':
+                ws = self.gameworld.systems['wall']
+                if ws.building:
+                    ws.confirm_wall()
+                ws.building = False
+            elif touch.button == 'right':
+                ss = self.gameworld.systems['shield']
+                ss.touch_released(touch)
     
 
 class PlayerSystem(GameSystem):
@@ -251,6 +377,12 @@ class KiventGame(Widget):
         self.gameworld.systems['player'].spawn_player((150, 150))
         Clock.schedule_interval(self.update, 0)
 
+        create_component_dict = {'grid_renderer': {'texture': 'fireball',
+                                                      'size': (5000, 5000)},
+                                 'position': (2500, 2500)}
+        self.gameworld.init_entity(create_component_dict,
+                                   ['position', 'grid_renderer'])
+
     def update(self, dt):
         self.gameworld.update(dt)
 
@@ -268,6 +400,7 @@ class KiventGame(Widget):
                                  systems_unpaused=['debug_renderer',
                                                    'physics_renderer'],
                                  screenmanager_screen='main')
+
 
     def set_state(self):
         self.gameworld.state = 'main'
