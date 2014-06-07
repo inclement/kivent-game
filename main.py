@@ -191,7 +191,7 @@ class WallSystem(GameSystem):
 
     def create_wall(self, pos, length, angle):
         shape_dict = {'width': length,
-                      'height': 10,
+                      'height': 20,
                       'mass': 50}
         col_shape = {'shape_type': 'box',
                      'elasticity': 1.,
@@ -212,8 +212,8 @@ class WallSystem(GameSystem):
                              'mass': 0,
                              'col_shapes': col_shapes}
         create_component_dict = {'physics': physics_component,
-                                 'physics_renderer': {'texture': 'fireball',
-                                                      'size': (length, 10)},
+                                 'physics_renderer': {'texture': 'wall',
+                                                      'size': (length, 20)},
                                  'position': pos,
                                  'wall': {},
                                  'rotate': 0}
