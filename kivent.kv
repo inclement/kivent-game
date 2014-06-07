@@ -50,6 +50,9 @@ KiventGame:
         MyProjectileSystem:
             system_id: 'projectile'
             gameworld: gameworld
+        EditSystem:
+            system_id: 'edit'
+            gameworld: gameworld
         GameMap:
             system_id: 'map'
             map_size: root.size
@@ -76,7 +79,7 @@ KiventGame:
         Renderer:
             gameworld: gameworld
             system_id: 'grid_renderer'
-            shader_source: 'assets/glsl/grid.glsl'
+            shader_source: 'assets/glsl/trivial.glsl'
             atlas_dir: 'assets/'
             atlas: 'images_atlas'
             do_rotate: False

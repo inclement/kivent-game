@@ -67,14 +67,23 @@ class ShieldSystem(GameSystem):
 
     current_touches = DictProperty({})
 
+    textures = ['fireball', 'waterball', 'earthball', 'airball']
+
     def new_touch(self, touch):
-        self.current_touches[touch] = (list(touch.pos), None)
+        texture = self.textures.pop(randint(0, len(self.textures)-1))
+        self.check_textures()
+        self.current_touches[touch] = (list(touch.pos), None, texture)
+
+    def check_textures(self, *args):
+        if len(self.textures) == 0:
+            self.textures = ['fireball', 'waterball', 'earthball',
+                             'airball']
 
     def touch_move(self, touch):
         if touch not in self.current_touches:
             return
 
-        points, entity = self.current_touches[touch]
+        points, entity, texture = self.current_touches[touch]
 
         pos = touch.pos
         diff = (pos[0] - points[-2], pos[1] - points[-1])
@@ -85,17 +94,17 @@ class ShieldSystem(GameSystem):
 
         if len(points) > 2:
             if entity is None:
-                entity = self.init_new_shield(points)
+                entity = self.init_new_shield(points, texture)
             else:
-                self.extend_shield(points, entity)
+                self.extend_shield(points, entity, texture)
 
-        self.current_touches[touch] = (points, entity)
+        self.current_touches[touch] = (points, entity, texture)
 
     def touch_released(self, touch):
         if touch in self.current_touches:
             self.current_touches.pop(touch)
                 
-    def init_new_shield(self, points):
+    def init_new_shield(self, points, texture):
         start = (points[0], points[1])
         end = (points[-2], points[-1])
         dr = (end[0] - start[0], end[1] - start[1])
@@ -124,7 +133,7 @@ class ShieldSystem(GameSystem):
                              'ang_vel_limit': 0,
                              'mass': 0,
                              'col_shapes': col_shapes}
-        texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
+        #texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
         create_component_dict = {'physics': physics_component,
                                  'physics_color_renderer': {'texture': texture,
                                                             'size': (length, 10)},
@@ -141,7 +150,7 @@ class ShieldSystem(GameSystem):
                                             component_order)
         return self.gameworld.entities[result]
 
-    def extend_shield(self, points, entity):
+    def extend_shield(self, points, entity, texture):
         start = (points[0], points[1])
         end = (points[-2], points[-1])
         dr = (end[0] - start[0], end[1] - start[1])
@@ -149,7 +158,7 @@ class ShieldSystem(GameSystem):
         angle = atan2(dr[1], dr[0])
         length = sqrt(dr[0]**2 + dr[1]**2)
 
-        self.init_new_shield(points[-4:])
+        self.init_new_shield(points[-4:], texture)
 
 
 class TimingSystem(GameSystem):
@@ -177,6 +186,8 @@ class WallSystem(GameSystem):
     building = BooleanProperty(False)
     prelim_start = ListProperty([0, 0])
     prelim_end = ListProperty([10, 10])
+
+    grid_spacing = NumericProperty(50)
 
     def create_wall(self, pos, length, angle):
         shape_dict = {'width': length,
@@ -212,6 +223,28 @@ class WallSystem(GameSystem):
                                             component_order)
         return result
 
+    def prelim_start_at(self, pos):
+        game_map = self.gameworld.systems['map']
+        spacing = self.grid_spacing
+
+        # How to get the right x and y position in game map terms?
+        rounded_x = round(pos[0] / float(spacing)) * spacing
+        rounded_y = round(pos[1] / float(spacing)) * spacing
+
+        self.prelim_start = (rounded_x, rounded_y)
+        self.prelim_end = (rounded_x, rounded_y)
+        self.building = True
+
+    def prelim_end_at(self, pos):
+        game_map = self.gameworld.systems['map']
+        spacing = self.grid_spacing
+
+        # How to get the right x and y position in game map terms?
+        rounded_x = round(pos[0] / float(spacing)) * spacing
+        rounded_y = round(pos[1] / float(spacing)) * spacing
+
+        self.prelim_end = (rounded_x, rounded_y)
+
     def confirm_wall(self):
         pos = tuple(self.prelim_start)
         length = sqrt((self.prelim_end[0] - self.prelim_start[0])**2 +
@@ -219,58 +252,107 @@ class WallSystem(GameSystem):
         angle = atan2(self.prelim_end[1] - self.prelim_start[1],
                       self.prelim_end[0] - self.prelim_start[0])
         self.create_wall(pos, length, angle)
+        self.building=False
 
 
 class InputSystem(GameSystem):
+    mode = StringProperty('play')
 
     def __init__(self, *args, **kwargs):
         super(InputSystem, self).__init__(*args, **kwargs)
         Window.bind(on_key_down=self.on_key_down,
                     on_key_up=self.on_key_up)
+        self.keys_down = set()
+
+    def on_mode(self, *args):
+        edit_renderer = self.gameworld.systems['grid_renderer']
+        if self.mode == 'edit':
+            edit_renderer.shader_source = 'assets/glsl/grid.glsl'
+        else:
+            edit_renderer.shader_source = 'assets/glsl/trivial.glsl'
+        print 'mode switched to', self.mode
 
     def on_key_down(self, window, keycode, *args):
-        if keycode not in (273, 274, 275, 276):
-            return
-        self.gameworld.systems['player'].keys_pressed.add(keycode)
+        if keycode in (273, 274, 275, 276):
+            self.gameworld.systems['player'].keys_pressed.add(keycode)
+
+        self.keys_down.add(keycode)
+        print keycode
+
+        if 306 in self.keys_down and keycode == 101:
+            self.mode = {'play': 'edit', 'edit': 'play'}[self.mode]
+        if keycode == 286:
+            self.mode = 'play'
+        if keycode == 287:
+            self.mode = 'edit'
 
     def on_key_up(self, window, keycode, *args):
-        if keycode not in (273, 274, 275, 276):
-            return
-        self.gameworld.systems['player'].keys_pressed.remove(keycode)
+        if keycode in (273, 274, 275, 276):
+            self.gameworld.systems['player'].keys_pressed.remove(keycode)
+
+        try:
+            self.keys_down.remove(keycode)
+        except KeyError as err:
+            print err
 
     def on_touch_down(self, touch):
-        if 'button' in touch.profile:
-            if touch.button == 'left':
-                self.gameworld.systems['player'].handle_touch_down(touch)
-            elif touch.button == 'middle':
-                ws = self.gameworld.systems['wall']
-                ws.prelim_start = touch.pos
-                ws.prelim_end = touch.pos
-                ws.building = True
-            elif touch.button == 'right':
-                ss = self.gameworld.systems['shield']
-                ss.new_touch(touch)
+        if self.mode == 'edit':
+            gw = self.gameworld
+            edit_system = self.gameworld.systems['edit']
+            edit_system.receive_touch_down(touch)
+            
+        else:
+            if 'button' in touch.profile:
+                if touch.button == 'left':
+                    self.gameworld.systems['player'].handle_touch_down(
+                        touch)
+                elif touch.button == 'right':
+                    ss = self.gameworld.systems['shield']
+                    ss.new_touch(touch)
 
     def on_touch_move(self, touch):
-        if 'button' in touch.profile:
-            if touch.button == 'middle':
-                ws = self.gameworld.systems['wall']
-                ws.prelim_end = touch.pos
-            elif touch.button == 'right':
-                ss = self.gameworld.systems['shield']
-                ss.touch_move(touch)
+        if self.mode == 'edit':
+            gw = self.gameworld
+            edit_system = gw.systems['edit']
+            edit_system.receive_touch_move(touch)
+
+        else:
+            if 'button' in touch.profile:
+                if touch.button == 'right':
+                    ss = self.gameworld.systems['shield']
+                    ss.touch_move(touch)
 
     def on_touch_up(self, touch):
+        if self.mode == 'edit':
+            gw = self.gameworld
+            edit_system = gw.systems['edit']
+            edit_system.receive_touch_up(touch)
         if 'button' in touch.profile:
-            if touch.button == 'middle':
+            if touch.button == 'right':
+                ss = self.gameworld.systems['shield']
+                ss.touch_released(touch)
+    
+class EditSystem(GameSystem):
+    def receive_touch_down(self, touch):
+        if 'button' in touch.profile:
+            if touch.button == 'left':
+                ws = self.gameworld.systems['wall']
+                ws.prelim_start_at(touch.pos)
+
+    def receive_touch_move(self, touch):
+        if 'button' in touch.profile:
+            if touch.button == 'left':
+                ws = self.gameworld.systems['wall']
+                ws.prelim_end_at(touch.pos)
+
+    def receive_touch_up(self, touch):
+        if 'button' in touch.profile:
+            if touch.button == 'left':
                 ws = self.gameworld.systems['wall']
                 if ws.building:
                     ws.confirm_wall()
                 ws.building = False
-            elif touch.button == 'right':
-                ss = self.gameworld.systems['shield']
-                ss.touch_released(touch)
-    
+        
 
 class PlayerSystem(GameSystem):
 
@@ -377,6 +459,7 @@ class KiventGame(Widget):
         self.gameworld.systems['player'].spawn_player((150, 150))
         Clock.schedule_interval(self.update, 0)
 
+        # Hack to make grid fragment shader work
         create_component_dict = {'grid_renderer': {'texture': 'fireball',
                                                       'size': (5000, 5000)},
                                  'position': (2500, 2500)}
