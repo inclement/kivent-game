@@ -67,6 +67,10 @@ class ShieldSystem(GameSystem):
 
     current_touches = DictProperty({})
 
+    collision_type = NumericProperty(0)
+
+    renderer = ObjectProperty(None)
+
     textures = ['fireball', 'waterball', 'earthball', 'airball']
 
     def new_touch(self, touch):
@@ -111,13 +115,13 @@ class ShieldSystem(GameSystem):
 
         angle = atan2(dr[1], dr[0])
         length = sqrt(dr[0]**2 + dr[1]**2)
-        
+
         shape_dict = {'width': length,
                       'height': 10,
                       'mass': 50}
         col_shape = {'shape_type': 'box',
                      'elasticity': 1.,
-                     'collision_type': 4,
+                     'collision_type': self.collision_type,
                      'shape_info': shape_dict,
                      'friction': 10.0}
         col_shapes = [col_shape]
@@ -135,8 +139,8 @@ class ShieldSystem(GameSystem):
                              'col_shapes': col_shapes}
         #texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
         create_component_dict = {'physics': physics_component,
-                                 'physics_color_renderer': {'texture': texture,
-                                                            'size': (length, 10)},
+                                 self.renderer: {'texture': texture,
+                                                 'size': (length, 10)},
                                  'position': start,
                                  'wall': {},
                                  'timing': {'original_time': 3.,
@@ -145,7 +149,7 @@ class ShieldSystem(GameSystem):
                                  'rotate': 0}
         component_order = ['position', 'rotate', 'color', 'physics', 'wall',
                            'timing',
-                           'physics_color_renderer']
+                           self.renderer]
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
         return self.gameworld.entities[result]
@@ -159,6 +163,10 @@ class ShieldSystem(GameSystem):
         length = sqrt(dr[0]**2 + dr[1]**2)
 
         self.init_new_shield(points[-4:], texture)
+
+class AirShieldSystem(ShieldSystem):
+    collision_type = NumericProperty(20)
+
 
 
 class TimingSystem(GameSystem):
@@ -435,7 +443,7 @@ class PlayerSystem(GameSystem):
                              'mass': 50,
                              'col_shapes': col_shapes}
         create_component_dict = {'physics': physics_component,
-                                 'physics_renderer': {'texture': 'black_stone',
+                                 'physics_renderer': {'texture': 'wizardhat',
                                                       'size': (64, 64)},
                                  'position': pos,
                                  'player': {},
