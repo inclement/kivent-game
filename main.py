@@ -31,7 +31,7 @@ class MyProjectileSystem(GameSystem):
                       'offset': (0, 0)}
         col_shape = {'shape_type': 'circle',
                      'elasticity': 1.,
-                     'collision_type': 1,
+                     'collision_type': 10,
                      'shape_info': shape_dict,
                      'friction': 10.0}
         col_shapes = [col_shape]
@@ -71,17 +71,27 @@ class ShieldSystem(GameSystem):
 
     renderer = ObjectProperty(None)
 
-    textures = ['fireball', 'waterball', 'earthball', 'airball']
+    textures = ListProperty(['fireball', 'waterball', 'earthball',
+                             'airball'])
+    available_textures = ListProperty(['fireball', 'waterball',
+                                       'earthball', 'airball'])
+
+    def __init__(self, *args, **kwargs):
+        super(ShieldSystem, self).__init__(*args, **kwargs)
+        self.available_textures = self.textures
+
+    def on_textures(self, *args):
+        self.available_textures = self.textures
 
     def new_touch(self, touch):
-        texture = self.textures.pop(randint(0, len(self.textures)-1))
+        texture = self.available_textures.pop(
+            randint(0, len(self.textures)-1))
         self.check_textures()
         self.current_touches[touch] = (list(touch.pos), None, texture)
 
     def check_textures(self, *args):
-        if len(self.textures) == 0:
-            self.textures = ['fireball', 'waterball', 'earthball',
-                             'airball']
+        if len(self.available_textures) == 0:
+            self.available_textures = self.textures
 
     def touch_move(self, touch):
         if touch not in self.current_touches:
@@ -166,7 +176,7 @@ class ShieldSystem(GameSystem):
 
 class AirShieldSystem(ShieldSystem):
     collision_type = NumericProperty(20)
-
+    textures = ListProperty(['airball'])
 
 
 class TimingSystem(GameSystem):
@@ -315,7 +325,7 @@ class InputSystem(GameSystem):
                     self.gameworld.systems['player'].handle_touch_down(
                         touch)
                 elif touch.button == 'right':
-                    ss = self.gameworld.systems['shield']
+                    ss = self.gameworld.systems['air_shield']
                     ss.new_touch(touch)
 
     def on_touch_move(self, touch):
@@ -327,7 +337,7 @@ class InputSystem(GameSystem):
         else:
             if 'button' in touch.profile:
                 if touch.button == 'right':
-                    ss = self.gameworld.systems['shield']
+                    ss = self.gameworld.systems['air_shield']
                     ss.touch_move(touch)
 
     def on_touch_up(self, touch):
@@ -361,6 +371,46 @@ class EditSystem(GameSystem):
                     ws.confirm_wall()
                 ws.building = False
         
+
+class FireSystem(GameSystem):
+
+    def spawn_continuous(self, pos, velocity, *args):
+        pass
+
+    def spawn_at_point(self, pos, velocity, size=50):
+        print 'spawnint at', pos, velocity, size
+        shape_dict = {'inner_radius': 0,
+                      'outer_radius': size,
+                      'mass': 50,
+                      'offset': (0, 0)}
+        col_shape = {'shape_type': 'circle',
+                     'elasticity': 1.,
+                     'collision_type': 16,
+                     'shape_info': shape_dict,
+                     'friction': 20.0}
+        col_shapes = [col_shape]
+        physics_component = {'main_shape': 'circle',
+                             'velocity': velocity,
+                             'position': pos,
+                             'angle': 0,
+                             'angular_velocity': 0,
+                             'vel_limit': 500,
+                             'ang_vel_limit': 0,
+                             'mass': 50,
+                             'col_shapes': col_shapes}
+        texture = 'fireball'
+        create_component_dict = {'physics': physics_component,
+                                 'fire_renderer': {'texture': texture,
+                                                      'size': (2*size, 2*size)},
+                                 'position': pos,
+                                 'rotate': 0,
+                                 'player': {}}
+        component_order = ['position', 'rotate', 'physics', 'player',
+                           'fire_renderer']
+        result = self.gameworld.init_entity(create_component_dict,
+                                            component_order)
+        return result
+                
 
 class PlayerSystem(GameSystem):
 
@@ -418,9 +468,13 @@ class PlayerSystem(GameSystem):
     def handle_touch_down(self, touch):
         entity = self.gameworld.entities[self.entity_ids[0]]
         angle = self.angle
-        self.gameworld.systems['projectile'].fire_projectile(
+        self.gameworld.systems['fire'].spawn_at_point(
             (entity.position.x + 37*cos(angle),
-             entity.position.y + 37*sin(angle)), self.angle)
+             entity.position.y + 37*sin(angle)),
+            (10*cos(angle), 10*sin(angle)))
+        # self.gameworld.systems['projectile'].fire_projectile(
+        #     (entity.position.x + 37*cos(angle),
+        #      entity.position.y + 37*sin(angle)), self.angle)
     
     def spawn_player(self, pos):
         shape_dict = {'inner_radius': 0,
@@ -464,6 +518,7 @@ class KiventGame(Widget):
         self.setup_map()
         self.setup_states()
         self.set_state()
+        self.init_collisions()
         self.gameworld.systems['player'].spawn_player((150, 150))
         Clock.schedule_interval(self.update, 0)
 
@@ -473,6 +528,12 @@ class KiventGame(Widget):
                                  'position': (2500, 2500)}
         self.gameworld.init_entity(create_component_dict,
                                    ['position', 'grid_renderer'])
+
+    def init_collisions(self):
+        physics = self.gameworld.systems['physics']
+        fire = self.gameworld.systems['fire']
+        # physics.add_collision_handler(10, 20,
+        #                               begin_func=
 
     def update(self, dt):
         self.gameworld.update(dt)
