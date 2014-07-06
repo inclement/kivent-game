@@ -60,7 +60,7 @@ KiventGame:
         FireShieldSystem:
             system_id: 'fire_shield'
             gameworld: gameworld
-            renderer: 'physics_color_renderer'
+            renderer: 'fire_renderer'
         WaterShieldSystem:
             system_id: 'water_shield'
             gameworld: gameworld
@@ -113,7 +113,8 @@ KiventGame:
             gameworld: gameworld
             system_id: 'fire_renderer'
             shader_source: 'assets/glsl/fire.glsl'
-            do_rotate: False
+            do_rotate: True
+            do_color: True
             atlas_dir: 'assets/'
             atlas: 'images_atlas'
             physics_system: 'physics'
@@ -133,11 +134,55 @@ KiventGame:
         size: root.size
         pos: root.pos
         gameworld: gameworld
+        current: 'main'
+        InterfaceScreen:
+            id: interface_screen
+            gameworld: root.gameworld
 
-<MainScreen@GameScreen>:
+<InterfaceScreen@GameScreen>:
+    gameworld: None
     name: 'main'
-    FloatLayout:
-        
-<GameScreenManager>:
-    MainScreen:
-        id: main_screen
+    LevelInterface:
+        gameworld: root.gameworld
+
+<ImageButton>:
+    allow_stretch: True
+    keep_ratio: False
+
+<ElementPicker>:
+    size_hint: None, 1
+    width: self.height
+    orientation: 'vertical'
+    ImageButton:
+        source: root.projectile_image
+        on_press: root.parent.parent.projectile_element = root.element
+    ImageButton:
+        source: root.shield_image
+        on_press: root.parent.parent.shield_element = root.element
+
+<LevelInterface>:
+    BoxLayout:
+        pos_hint: {'x': 0, 'y': 0}
+        size_hint: 1, None
+        height: sp(70)
+        Widget:
+        ElementPicker:
+            id: earth
+            element: 'earth'
+            projectile_image: 'atlas://assets/images_atlas/earthball'
+            shield_image: 'atlas://assets/images_atlas/earthball'
+        ElementPicker:
+            id: air
+            element: 'air'
+            projectile_image: 'atlas://assets/images_atlas/airball'
+            shield_image: 'atlas://assets/images_atlas/airball'
+        ElementPicker:
+            id: fire
+            element: 'fire'
+            projectile_image: 'atlas://assets/images_atlas/fireball'
+            shield_image: 'atlas://assets/images_atlas/fireball'
+        ElementPicker:
+            id: water
+            element: 'water'
+            projectile_image: 'atlas://assets/images_atlas/waterball'
+            shield_image: 'atlas://assets/images_atlas/waterball'

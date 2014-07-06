@@ -6,6 +6,9 @@ config.Config.set('input', 'mouse', 'mouse,disable_multitouch')
 from kivy.uix.widget import Widget
 from kivy.uix.effectwidget import EffectWidget, FXAAEffect
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.vector import Vector
@@ -22,6 +25,33 @@ from math import radians, sqrt, atan2, sin, cos
 from functools import partial
 
 import ipdb
+
+class ImageButton(ButtonBehavior, Image):
+    pass
+
+class ElementPicker(BoxLayout):
+    element = StringProperty('fire')
+    projectile_image = StringProperty('atlas://assets/images_atlas/airball')
+    shield_image = StringProperty('atlas://assets/images_atlas/fireball')
+
+class LevelInterface(FloatLayout):
+    gameworld = ObjectProperty(None)
+
+    projectile_element = StringProperty('air')
+    shield_element = StringProperty('fire')
+
+    def on_projectile_element(self, instance, elt):
+        print 'on_projectile_element', self.gameworld
+        if self.gameworld is not None:
+            gw = self.gameworld
+            gw.systems['input'].projectile_element = elt
+
+    def on_shield_element(self, instance, elt):
+        if self.gameworld is not None:
+            gw = self.gameworld
+            gw.systems['input'].shield_element = elt
+
+    
 
 class MyProjectileSystem(GameSystem):
 
@@ -141,7 +171,7 @@ class ShieldSystem(GameSystem):
         length = sqrt(dr[0]**2 + dr[1]**2)
 
         shape_dict = {'width': length,
-                      'height': 10,
+                      'height': 30,
                       'mass': 50}
         col_shape = {'shape_type': 'box',
                      'elasticity': 1.,
@@ -163,7 +193,7 @@ class ShieldSystem(GameSystem):
                              'col_shapes': col_shapes}
         create_component_dict = {'physics': physics_component,
                                  self.renderer: {'texture': texture,
-                                                 'size': (length, 10)},
+                                                 'size': (length, 30)},
                                  'position': start,
                                  'wall': {},
                                  'timing': {'original_time': 3.,
