@@ -11,7 +11,8 @@ from kivy.clock import Clock
 from kivy.vector import Vector
 from kivy.properties import (ListProperty, DictProperty,
                              NumericProperty, ObjectProperty,
-                             BooleanProperty, StringProperty)
+                             BooleanProperty, StringProperty,
+                             OptionProperty)
 
 import kivent
 from kivent import GameSystem
@@ -23,6 +24,8 @@ from functools import partial
 import ipdb
 
 class MyProjectileSystem(GameSystem):
+
+    texture = StringProperty('black_stone')
 
     def fire_projectile(self, pos, angle):
         shape_dict = {'inner_radius': 0,
@@ -45,7 +48,8 @@ class MyProjectileSystem(GameSystem):
                              'ang_vel_limit': radians(200),
                              'mass': 50,
                              'col_shapes': col_shapes}
-        texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
+        # texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
+        texture = self.texture
         create_component_dict = {'physics': physics_component,
                                  'physics_renderer': {'texture': texture,
                                                       'size': (20, 20)},
@@ -57,6 +61,18 @@ class MyProjectileSystem(GameSystem):
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
         return result
+
+class EarthProjectileSystem(MyProjectileSystem):
+    texture = StringProperty('earthball')
+
+class AirProjectileSystem(MyProjectileSystem):
+    texture = StringProperty('airball')
+
+class FireProjectileSystem(MyProjectileSystem):
+    texture = StringProperty('fireball')
+
+class WaterProjectileSystem(MyProjectileSystem):
+    texture = StringProperty('waterball')
 
 class ShieldSystem(GameSystem):
 
@@ -71,10 +87,8 @@ class ShieldSystem(GameSystem):
 
     renderer = ObjectProperty(None)
 
-    textures = ListProperty(['fireball', 'waterball', 'earthball',
-                             'airball'])
-    available_textures = ListProperty(['fireball', 'waterball',
-                                       'earthball', 'airball'])
+    textures = ListProperty(['black_stone'])
+    available_textures = ListProperty(['black_stone'])
 
     def __init__(self, *args, **kwargs):
         super(ShieldSystem, self).__init__(*args, **kwargs)
@@ -85,7 +99,7 @@ class ShieldSystem(GameSystem):
 
     def new_touch(self, touch):
         texture = self.available_textures.pop(
-            randint(0, len(self.textures)-1))
+            randint(0, len(self.available_textures)-1))
         self.check_textures()
         self.current_touches[touch] = (list(touch.pos), None, texture)
 
@@ -147,7 +161,6 @@ class ShieldSystem(GameSystem):
                              'ang_vel_limit': 0,
                              'mass': 0,
                              'col_shapes': col_shapes}
-        #texture = choice(['fireball', 'waterball', 'earthball', 'airball'])
         create_component_dict = {'physics': physics_component,
                                  self.renderer: {'texture': texture,
                                                  'size': (length, 10)},
@@ -174,9 +187,21 @@ class ShieldSystem(GameSystem):
 
         self.init_new_shield(points[-4:], texture)
 
-class AirShieldSystem(ShieldSystem):
+class EarthShieldSystem(ShieldSystem):
     collision_type = NumericProperty(20)
+    textures = ListProperty(['earthball'])
+
+class AirShieldSystem(ShieldSystem):
+    collision_type = NumericProperty(21)
     textures = ListProperty(['airball'])
+
+class FireShieldSystem(ShieldSystem):
+    collision_type = NumericProperty(22)
+    textures = ListProperty(['fireball'])
+
+class WaterShieldSystem(ShieldSystem):
+    collision_type = NumericProperty(23)
+    textures = ListProperty(['waterball'])
 
 
 class TimingSystem(GameSystem):
@@ -276,6 +301,12 @@ class WallSystem(GameSystem):
 class InputSystem(GameSystem):
     mode = StringProperty('play')
 
+    projectile_element = OptionProperty('air', options=['earth', 'air',
+                                                        'fire', 'water'])
+
+    shield_element = OptionProperty('fire', options=['earth', 'air',
+                                                     'fire', 'water'])
+
     def __init__(self, *args, **kwargs):
         super(InputSystem, self).__init__(*args, **kwargs)
         Window.bind(on_key_down=self.on_key_down,
@@ -322,10 +353,11 @@ class InputSystem(GameSystem):
         else:
             if 'button' in touch.profile:
                 if touch.button == 'left':
-                    self.gameworld.systems['player'].handle_touch_down(
-                        touch)
+                    self.gameworld.systems['player'].fire_projectile(
+                        touch, self.projectile_element)
                 elif touch.button == 'right':
-                    ss = self.gameworld.systems['air_shield']
+                    ss = self.gameworld.systems['{}_shield'.format(
+                        self.shield_element)]
                     ss.new_touch(touch)
 
     def on_touch_move(self, touch):
@@ -337,7 +369,8 @@ class InputSystem(GameSystem):
         else:
             if 'button' in touch.profile:
                 if touch.button == 'right':
-                    ss = self.gameworld.systems['air_shield']
+                    ss = self.gameworld.systems['{}_shield'.format(
+                        self.shield_element)]
                     ss.touch_move(touch)
 
     def on_touch_up(self, touch):
@@ -347,7 +380,8 @@ class InputSystem(GameSystem):
             edit_system.receive_touch_up(touch)
         if 'button' in touch.profile:
             if touch.button == 'right':
-                ss = self.gameworld.systems['shield']
+                ss = self.gameworld.systems['{}_shield'.format(
+                    self.shield_element)]
                 ss.touch_released(touch)
     
 class EditSystem(GameSystem):
@@ -380,14 +414,14 @@ class FireSystem(GameSystem):
     def spawn_at_point(self, pos, velocity, size=50):
         print 'spawnint at', pos, velocity, size
         shape_dict = {'inner_radius': 0,
-                      'outer_radius': size,
+                      'outer_radius': size/2.,
                       'mass': 50,
                       'offset': (0, 0)}
         col_shape = {'shape_type': 'circle',
                      'elasticity': 1.,
                      'collision_type': 16,
                      'shape_info': shape_dict,
-                     'friction': 20.0}
+                     'friction': 00.0}
         col_shapes = [col_shape]
         physics_component = {'main_shape': 'circle',
                              'velocity': velocity,
@@ -465,16 +499,16 @@ class PlayerSystem(GameSystem):
 
         entity.physics.body.apply_impulse((mass*change[0], mass*change[1]))
 
-    def handle_touch_down(self, touch):
+    def fire_projectile(self, touch, element):
         entity = self.gameworld.entities[self.entity_ids[0]]
         angle = self.angle
-        self.gameworld.systems['fire'].spawn_at_point(
-            (entity.position.x + 37*cos(angle),
-             entity.position.y + 37*sin(angle)),
-            (10*cos(angle), 10*sin(angle)))
-        # self.gameworld.systems['projectile'].fire_projectile(
+        # self.gameworld.systems['fire'].spawn_at_point(
         #     (entity.position.x + 37*cos(angle),
-        #      entity.position.y + 37*sin(angle)), self.angle)
+        #      entity.position.y + 37*sin(angle)),
+        #     (200*cos(angle), 200*sin(angle)))
+        self.gameworld.systems['{}_projectile'.format(element)].fire_projectile(
+            (entity.position.x + 37*cos(angle),
+             entity.position.y + 37*sin(angle)), self.angle)
     
     def spawn_player(self, pos):
         shape_dict = {'inner_radius': 0,
