@@ -48,7 +48,7 @@ KiventGame:
         FireSystem:
             system_id: 'fire'
             gameworld: gameworld
-            renderer: 'fire_renderer'
+            renderer: 'colour_renderer'
         EarthShieldSystem:
             system_id: 'earth_shield'
             gameworld: gameworld
@@ -56,15 +56,17 @@ KiventGame:
         AirShieldSystem:
             system_id: 'air_shield'
             gameworld: gameworld
-            renderer: 'physics_color_renderer'
+            renderer: 'colour_renderer'
         FireShieldSystem:
             system_id: 'fire_shield'
             gameworld: gameworld
-            renderer: 'fire_renderer'
+            colour: 1, 0, 0, 1
+            renderer: 'colour_renderer'
         WaterShieldSystem:
             system_id: 'water_shield'
             gameworld: gameworld
-            renderer: 'physics_color_renderer'
+            colour: 0, 0.1, 1, 1
+            renderer: 'colour_renderer'
         TimingSystem:
             system_id: 'timing'
             gameworld: gameworld
@@ -111,7 +113,7 @@ KiventGame:
             physics_system: 'physics'
         TimeDynamicRenderer:
             gameworld: gameworld
-            system_id: 'fire_renderer'
+            system_id: 'colour_renderer'
             shader_source: 'assets/glsl/fire.glsl'
             do_rotate: True
             do_color: True

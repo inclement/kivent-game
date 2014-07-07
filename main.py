@@ -20,8 +20,8 @@ from kivy.properties import (ListProperty, DictProperty,
 import kivent
 from kivent import GameSystem, DynamicRenderer
 
-from random import randint, choice
-from math import radians, sqrt, atan2, sin, cos
+from random import randint, choice, random
+from math import radians, sqrt, atan2, sin, cos, pi
 from functools import partial
 
 import ipdb
@@ -81,6 +81,8 @@ class MyProjectileSystem(GameSystem):
 
     texture = StringProperty('black_stone')
 
+    colour = ListProperty([1, 1, 1, 1])
+
     def fire_projectile(self, pos, angle):
         shape_dict = {'inner_radius': 0,
                       'outer_radius': 10,
@@ -137,9 +139,13 @@ class ShieldSystem(GameSystem):
 
     current_touches = DictProperty({})
 
+    colour = ListProperty([1, 1, 1, 1])
+
     collision_type = NumericProperty(0)
 
     renderer = ObjectProperty(None)
+
+    new_shield_dist = NumericProperty(25)
 
     textures = ListProperty(['black_stone'])
     available_textures = ListProperty(['black_stone'])
@@ -171,7 +177,7 @@ class ShieldSystem(GameSystem):
         diff = (pos[0] - points[-2], pos[1] - points[-1])
         dist = sqrt(diff[0]**2 + diff[1]**2)
 
-        if dist > 25:
+        if dist > self.new_shield_dist:
             points.extend(pos)
 
         if len(points) > 2:
@@ -222,9 +228,10 @@ class ShieldSystem(GameSystem):
                                  'wall': {},
                                  'timing': {'original_time': 3.,
                                             'current_time': 3.},
-                                 'color': (1, 1, 1, 1),
+                                 'color': tuple(self.colour),
                                  'rotate': 0}
-        component_order = ['position', 'rotate', 'color', 'physics', 'wall',
+        component_order = ['position', 'rotate', 'color', 'physics',
+                           'wall',
                            'timing',
                            self.renderer]
         result = self.gameworld.init_entity(create_component_dict,
@@ -244,7 +251,61 @@ class ShieldSystem(GameSystem):
 class EarthShieldSystem(ShieldSystem):
     collision_type = NumericProperty(20)
     textures = ListProperty(['earthball'])
+    def init_new_shield(self, points, texture):
+        start = (points[0], points[1])
+        end = (points[-2], points[-1])
+        dr = (end[0] - start[0], end[1] - start[1])
 
+        angle = atan2(dr[1], dr[0])
+        length = sqrt(dr[0]**2 + dr[1]**2)
+
+        random_modifier = 0.4*random()
+        radius = length*(1.2 + random_modifier)
+        mass = 400*(pi*radius**2 / pi*(1.2*length)**2)
+
+        shape_dict = {'inner_radius': 0,
+                      'outer_radius': radius,
+                      'mass': mass,
+                      'offset': (0, 0)}
+        col_shape = {'shape_type': 'circle',
+                     'elasticity': 0.7,
+                     'collision_type': self.collision_type,
+                     'shape_info': shape_dict,
+                     'friction': 10.0}
+        col_shapes = [col_shape]
+
+        centre_x = start[0] + 0.5*length*cos(angle)
+        centre_y = start[1] + 0.5*length*sin(angle)
+        physics_component = {'main_shape': 'box',
+                             'velocity': (0, 0),
+                             'position': (centre_x, centre_y),
+                             'angle': angle,
+                             'angular_velocity': 0,
+                             'vel_limit': 0,
+                             'ang_vel_limit': 0,
+                             'mass': 0,
+                             'col_shapes': col_shapes}
+        create_component_dict = {'physics': physics_component,
+                                 self.renderer: {'texture': texture,
+                                                 'size': (length, 30)},
+                                 'position': start,
+                                 'wall': {},
+                                 'timing': {'original_time': 3.,
+                                            'current_time': 3.},
+                                 'color': tuple(self.colour),
+                                 'rotate': 0}
+        component_order = ['position', 'rotate', 'color', 'physics',
+                           'wall',
+                           'timing',
+                           self.renderer]
+        result = self.gameworld.init_entity(create_component_dict,
+                                            component_order)
+        return self.gameworld.entities[result]
+
+    def init_secondary_rocks(self, points, texture):
+        pass
+
+    
 class AirShieldSystem(ShieldSystem):
     collision_type = NumericProperty(21)
     textures = ListProperty(['airball'])
@@ -488,13 +549,13 @@ class FireSystem(GameSystem):
                              'col_shapes': col_shapes}
         texture = 'fireball'
         create_component_dict = {'physics': physics_component,
-                                 'fire_renderer': {'texture': texture,
+                                 'colour_renderer': {'texture': texture,
                                                       'size': (2*size, 2*size)},
                                  'position': pos,
                                  'rotate': 0,
                                  'player': {}}
         component_order = ['position', 'rotate', 'physics', 'player',
-                           'fire_renderer']
+                           'colour_renderer']
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
         return result

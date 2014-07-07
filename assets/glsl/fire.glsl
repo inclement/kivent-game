@@ -24,7 +24,7 @@ uniform float      time;
 void main (void) {
   /* frag_color = color * vec4(1.0, 1.0, 1.0,  */
   /*                           (1.0 - pow(1.0 - vColor.w, 3.0)) * opacity); */
-  frag_color = vec4(1.0, 0.0, 0.0, vColor.w);
+  frag_color = vColor;
   tex_coord0 = vTexCoords0;
   float a_sin = sin(vRotation);
   float a_cos = cos(vRotation);
