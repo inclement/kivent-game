@@ -19,6 +19,7 @@ uniform mat4       modelview_mat;
 uniform mat4       projection_mat;
 uniform vec4       color;
 uniform float      opacity;
+uniform float      time;
 
 void main (void) {
   /* frag_color = color * vec4(1.0, 1.0, 1.0,  */
@@ -35,7 +36,10 @@ void main (void) {
               0.0, 1.0, 0.0, vCenter.y,
               0.0, 0.0, 1.0, 0.0,
               0.0, 0.0, 0.0, 1.0);
-  vec4 pos = vec4(vPosition.xy*.5, 0.0, 1.0);
+  float xc = vPosition.x;
+  float yc = vPosition.y;
+  vec4 pos = vec4(vPosition.xy*.5, 0.0, 1.0) + 
+    vec4(1.0 * sin(3.0*time+xc*yc), 1.0*cos(2.8*time+xc*yc), 0.0, 0.0);
   vec4 trans_pos = pos * rot_mat * trans_mat;
   gl_Position = projection_mat * modelview_mat * trans_pos;
 

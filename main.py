@@ -18,13 +18,18 @@ from kivy.properties import (ListProperty, DictProperty,
                              OptionProperty)
 
 import kivent
-from kivent import GameSystem
+from kivent import GameSystem, DynamicRenderer
 
 from random import randint, choice
 from math import radians, sqrt, atan2, sin, cos
 from functools import partial
 
 import ipdb
+
+class TimeDynamicRenderer(DynamicRenderer):
+    def update(self, dt):
+        super(TimeDynamicRenderer, self).update(dt)
+        self.canvas['time'] = Clock.get_boottime()
 
 class ImageButton(ButtonBehavior, Image):
     pass
