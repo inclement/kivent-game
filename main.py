@@ -262,7 +262,7 @@ class EarthShieldSystem(ShieldSystem):
 
         random_modifier = 0.8*(random()-0.5)
         radius = length*(1.3 + random_modifier)
-        mass = 1800*(radius/(1.2*length))**2
+        mass = 9000*(radius/(1.2*length))**2
 
         shape_dict = {'inner_radius': 0,
                       'outer_radius': radius,
