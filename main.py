@@ -467,6 +467,8 @@ class WallSystem(GameSystem):
 class InputSystem(GameSystem):
     mode = StringProperty('play')
 
+    touches = ListProperty([])
+
     projectile_element = OptionProperty('air', options=['earth', 'air',
                                                         'fire', 'water'])
 
@@ -525,6 +527,10 @@ class InputSystem(GameSystem):
                     ss = self.gameworld.systems['{}_shield'.format(
                         self.shield_element)]
                     ss.new_touch(touch)
+            elif 'pos' in touch.profile:
+                ss = self.gameworld.systems['{}_shield'.format(
+                    self.shield_element)]
+                ss.new_touch(touch)
 
     def on_touch_move(self, touch):
         if self.mode == 'edit':
@@ -538,6 +544,10 @@ class InputSystem(GameSystem):
                     ss = self.gameworld.systems['{}_shield'.format(
                         self.shield_element)]
                     ss.touch_move(touch)
+            elif 'pos' in touch.profile:
+                ss = self.gameworld.systems['{}_shield'.format(
+                    self.shield_element)]
+                ss.touch_move(touch)
 
     def on_touch_up(self, touch):
         if self.mode == 'edit':
@@ -549,6 +559,10 @@ class InputSystem(GameSystem):
                 ss = self.gameworld.systems['{}_shield'.format(
                     self.shield_element)]
                 ss.touch_released(touch)
+        elif 'pos' in touch.profile:
+            ss = self.gameworld.systems['{}_shield'.format(
+                self.shield_element)]
+            ss.touch_released(touch)
     
 class EditSystem(GameSystem):
     def receive_touch_down(self, touch):
