@@ -1,4 +1,4 @@
-KiventGame:
+#:import Window kivy.core.window.Window
 
 <KiventGame>:
     gameworld: gameworld
@@ -132,6 +132,7 @@ KiventGame:
             gameworld: root.gameworld
             system_id: 'physics'
             viewport: 'gameview'
+            damping: 0.25
     GameScreenManager:
         id: gamescreenmanager
         size: root.size
@@ -192,3 +193,26 @@ KiventGame:
             element: 'water'
             projectile_image: 'atlas://assets/images_atlas/waterball'
             shield_image: 'atlas://assets/images_atlas/waterball'
+
+
+<EditInterface>:
+    size_hint_y: None
+    height: sp(100)
+    pos_hint: {'x': 0, 'y': float(self.y_shift) * (Window.height - self.height) / float(Window.height)}
+    visible: self.parent is not None
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_x: None
+        width: sp(80)
+        Spinner:
+            text: 'walls'
+            values: ['walls', 'add entity', 'manipulate']
+            on_text: root.mode = self.text
+        Button:
+            text: 'flip'
+            on_press: root.top = not root.top
+    
+    Image:
+        source: 'colours.png'
+        allow_stretch: True
+        keep_ratio: False
