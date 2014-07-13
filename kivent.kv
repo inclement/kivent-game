@@ -203,16 +203,33 @@
     BoxLayout:
         orientation: 'vertical'
         size_hint_x: None
-        width: sp(80)
+        width: dp(80)
         Spinner:
             text: 'walls'
-            values: ['walls', 'add entity', 'manipulate']
-            on_text: root.mode = self.text
+            values: ['walls', 'entities']
+            on_text: sm.current = self.text
         Button:
             text: 'flip'
             on_press: root.top = not root.top
     
-    Image:
-        source: 'colours.png'
-        allow_stretch: True
-        keep_ratio: False
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_x: None
+        width: dp(40)
+        Button:
+            text: 'move'
+            on_press: root.mode = 'move_map'
+    ScreenManager:
+        id: sm
+        Screen:
+            name: 'walls'
+            BoxLayout:
+                Button:
+                    text: 'add wall'
+                    on_press: root.mode = 'add_wall'
+        Screen:
+            name: 'entities'
+            BoxLayout:
+                Button:
+                    text: 'add entity'
+                    on_press: root.mode = 'add_wall'

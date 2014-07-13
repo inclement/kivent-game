@@ -110,7 +110,4 @@ class EditInterface(BoxLayout):
             Animation(y_shift=0, t='out_cubic', duration=0.5).start(self)
 
     def on_mode(self, instance, value):
-        if value == 'walls':
-            self.editsystem.touch_mode = 'add_wall'
-        elif value == 'manipulate':
-            self.editsystem.touch_mode = 'move_map'
+        self.editsystem.touch_mode = value
