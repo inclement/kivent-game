@@ -16,6 +16,7 @@ from kivy.properties import (ListProperty, DictProperty,
                              NumericProperty, ObjectProperty,
                              BooleanProperty, StringProperty,
                              OptionProperty)
+from kivy.utils import platform
 
 import kivent
 from kivent import GameSystem, DynamicRenderer
@@ -24,7 +25,7 @@ from random import randint, choice, random, normalvariate
 from math import radians, sqrt, atan2, sin, cos, pi
 from functools import partial
 
-import ipdb
+#import ipdb
 
 class TimeDynamicRenderer(DynamicRenderer):
     def update(self, dt):
@@ -711,9 +712,15 @@ class KiventGame(Widget):
 
     def __init__(self, **kwargs):
         super(KiventGame, self).__init__(**kwargs)
-        Clock.schedule_once(self.init_game)
+        Clock.schedule_once(self.init_game, 1)
 
     def init_game(self, dt):
+        try:
+            self._init_game(0)
+        except KeyError:
+            Clock.schedule_once(self.init_game)
+
+    def _init_game(self, dt):
         self.setup_map()
         self.setup_states()
         self.set_state()
@@ -739,6 +746,9 @@ class KiventGame(Widget):
 
     def setup_map(self):
         gameworld = self.gameworld
+        print 'systems are', gameworld, gameworld.systems
+        print 'children are', self.children
+        print 'gameworld children are', self.children[-1].children
         gameworld.currentmap = gameworld.systems['map']
 
     def setup_states(self):
