@@ -22,17 +22,21 @@ class EditSystem(GameSystem):
         print 'touch mode is', self.touch_mode
     
     def receive_touch_down(self, touch):
+        cam_pos = self.gameworld.systems['gameview'].camera_pos
+        touch_pos = touch.pos[0] - cam_pos[0], touch.pos[1] - cam_pos[1]
         if self.touch_mode == 'add_wall':
             ws = self.gameworld.systems['wall']
-            ws.prelim_start_at(touch.pos)
+            ws.prelim_start_at(touch_pos)
         elif self.touch_mode == 'move_map':
             if self.active_touch is None:
                 self.active_touch = touch
             
     def receive_touch_move(self, touch):
+        cam_pos = self.gameworld.systems['gameview'].camera_pos
+        touch_pos = touch.pos[0] - cam_pos[0], touch.pos[1] - cam_pos[1]
         if self.touch_mode == 'add_wall':
             ws = self.gameworld.systems['wall']
-            ws.prelim_end_at(touch.pos)
+            ws.prelim_end_at(touch_pos)
         elif self.touch_mode == 'move_map':
             if touch is self.active_touch:
                 print 'move touch gameview'

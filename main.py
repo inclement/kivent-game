@@ -74,6 +74,10 @@ class InputSystem(GameSystem):
                     on_key_up=self.on_key_up)
         self.keys_down = set()
 
+    def to_map(self, coords):
+        cam_pos = self.gameworld.systems['gameview'].cam_pos
+        return (coords[0] - cam_pos[0], coords[1] - cam_pos[1])
+
     def on_mode(self, instance, value):
         if value == 'edit':
             self.gameworld.systems['edit'].active = True
@@ -252,9 +256,9 @@ class PlayerSystem(GameSystem):
                            'physics_renderer']
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
-        gv = self.gameworld.systems['gameview']
-        gv.entity_to_focus = result
-        gv.focus_entity = True
+        # gv = self.gameworld.systems['gameview']
+        # gv.entity_to_focus = result
+        # gv.focus_entity = True
         return result
 
 class KiventGame(Widget):
@@ -280,7 +284,7 @@ class KiventGame(Widget):
         # Hack to make grid fragment shader work
         create_component_dict = {'grid_renderer': {'texture': 'fireball',
                                                       'size': (5000, 5000)},
-                                 'position': (2500, 2500)}
+                                 'position': (0, 0)}
         self.gameworld.init_entity(create_component_dict,
                                    ['position', 'grid_renderer'])
 

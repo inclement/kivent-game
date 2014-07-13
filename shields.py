@@ -86,8 +86,11 @@ class ShieldSystem(GameSystem):
                      'friction': 10.0}
         col_shapes = [col_shape]
 
-        centre_x = start[0] + 0.5*length*cos(angle)
-        centre_y = start[1] + 0.5*length*sin(angle)
+        cam_pos = self.gameworld.systems['gameview'].camera_pos
+        print 'cam pos is', cam_pos
+        centre_x = start[0] + 0.5*length*cos(angle) - cam_pos[0]
+        centre_y = start[1] + 0.5*length*sin(angle) - cam_pos[1]
+        print 'centre is', centre_x, centre_y
         physics_component = {'main_shape': 'box',
                              'velocity': (0, 0),
                              'position': (centre_x, centre_y),
@@ -127,6 +130,7 @@ class ShieldSystem(GameSystem):
 class EarthShieldSystem(ShieldSystem):
     collision_type = NumericProperty(20)
     textures = ListProperty(['earthball'])
+
     def init_new_shield(self, points, texture):
         start = (points[0], points[1])
         end = (points[-2], points[-1])
@@ -150,10 +154,11 @@ class EarthShieldSystem(ShieldSystem):
                      'friction': 10.0}
         col_shapes = [col_shape]
 
+        cam_pos = self.gameworld.systems['gameview'].camera_pos
         centre_x = (start[0] + 0.5*length*cos(angle) +
-                    0.1*length*normalvariate(0, 1))
+                    0.1*length*normalvariate(0, 1)) - cam_pos[0]
         centre_y = (start[1] + 0.5*length*sin(angle) +
-                    0.1*length*normalvariate(0, 1))
+                    0.1*length*normalvariate(0, 1)) - cam_pos[1]
         physics_component = {'main_shape': 'box',
                              'velocity': (0, 0),
                              'position': (centre_x, centre_y),
@@ -203,10 +208,11 @@ class EarthShieldSystem(ShieldSystem):
                      'friction': 10.0}
         col_shapes = [col_shape]
 
+        cam_pos = self.gameworld.systems['gameview'].camera_pos
         centre_x = (pos[0] + 
-                    0.3*length*normalvariate(0, 1))
+                    0.3*length*normalvariate(0, 1)) - cam_pos[0]
         centre_y = (pos[1] + 
-                    0.3*length*normalvariate(0, 1))
+                    0.3*length*normalvariate(0, 1)) - cam_pos[1]
         physics_component = {'main_shape': 'box',
                              'velocity': (0, 0),
                              'position': (centre_x, centre_y),
